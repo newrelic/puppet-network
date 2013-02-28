@@ -66,14 +66,28 @@ define network::bond::static (
     default => undef,
   }
 
-  augeas { "modprobe.conf_${title}":
-    context => '/files/etc/modprobe.conf',
-    changes => [
-      "set alias[last()+1] ${title}",
-      'set alias[last()]/modulename bonding',
-    ],
-    onlyif  => "match alias[*][. = '${title}'] size == 0",
-    #onlyif  => 'match */modulename[. = 'bonding'] size == 0',
-    before  => $ifstate
+  case $::lsbmajdistrelease {
+    6: {
+      file { "/etc/modprobe.d/${title}-bonding.conf":
+        ensure  => file,
+        owner   => root,
+        group   => root,
+        mode    => 644,
+        content => "alias ${title} bonding",
+        before  => $ifstate
+      }
+    }
+    default: {
+      augeas { "modprobe.conf_${title}":
+        context => '/files/etc/modprobe.conf',
+        changes => [
+          "set alias[last()+1] ${title}",
+          'set alias[last()]/modulename bonding',
+        ],
+        onlyif  => "match alias[*][. = '${title}'] size == 0",
+        #onlyif  => 'match */modulename[. = 'bonding'] size == 0',
+        before  => $ifstate
+      }
+    }
   }
 } # define network::bond::static
